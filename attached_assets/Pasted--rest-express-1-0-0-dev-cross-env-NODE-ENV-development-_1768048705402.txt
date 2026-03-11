@@ -1,0 +1,50 @@
+
+> rest-express@1.0.0 dev
+> cross-env NODE_ENV=development tsx server/index.ts
+
+Database already seeded, skipping...
+12:38:04 PM [vite] (client) Re-optimizing dependencies because lockfile has changed
+12:38:04 PM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✘ [ERROR] No matching export in "node_modules/three/build/three.module.js" for import "sRGBEncoding"
+
+    node_modules/@react-three/postprocessing/dist/effects/Texture.js:5:24:
+      5 │ import { TextureLoader, sRGBEncoding, RepeatWrapping } from "three";
+        ╵                         ~~~~~~~~~~~~
+
+✘ [ERROR] No matching export in "node_modules/three/build/three.module.js" for import "WebGLMultipleRenderTargets"
+
+    node_modules/@react-three/postprocessing/dist/effects/SSR/screen-space-reflections.js:2:164:
+      2 │ ...et, HalfFloatType, WebGLMultipleRenderTargets, Quaternion, Neare...
+        ╵                       ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/home/runner/workspace/node_modules/vite/node_modules/esbuild/lib/main.js:1467
+  let error = new Error(text);
+              ^
+
+Error: Error during dependency optimization:
+
+✘ [ERROR] No matching export in "node_modules/three/build/three.module.js" for import "WebGLMultipleRenderTargets"
+
+    node_modules/@react-three/postprocessing/dist/effects/SSR/screen-space-reflections.js:2:164:
+      2 │ ...et, HalfFloatType, WebGLMultipleRenderTargets, Quaternion, Neare...
+        ╵                       ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] No matching export in "node_modules/three/build/three.module.js" for import "sRGBEncoding"
+
+    node_modules/@react-three/postprocessing/dist/effects/Texture.js:5:24:
+      5 │ import { TextureLoader, sRGBEncoding, RepeatWrapping } from "three";
+        ╵                         ~~~~~~~~~~~~
+
+
+    at failureErrorWithLog (/home/runner/workspace/node_modules/vite/node_modules/esbuild/lib/main.js:1467:15)
+    at /home/runner/workspace/node_modules/vite/node_modules/esbuild/lib/main.js:926:25
+    at /home/runner/workspace/node_modules/vite/node_modules/esbuild/lib/main.js:1345:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  errors: [Getter/Setter],
+  warnings: [Getter/Setter]
+}
+
+Node.js v20.19.3
