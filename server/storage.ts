@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, sql, desc, and, inArray } from "drizzle-orm";
+import { eq, sql, desc, and, inArray, or, isNull } from "drizzle-orm";
 import {
   industries,
   domains,
@@ -59,20 +59,20 @@ export interface IStorage {
   createRole(data: InsertRole): Promise<Role>;
 
   // Salaries
-  getAllSalaries(domainId?: number): Promise<Salary[]>;
-  getSalaryStats(): Promise<{ domain: string; minSalary: number; maxSalary: number; avgSalary: number }[]>;
+  getAllSalaries(domainId?: number, industryId?: number): Promise<Salary[]>;
+  getSalaryStats(industryId?: number): Promise<{ domain: string; minSalary: number; maxSalary: number; avgSalary: number }[]>;
   createSalary(data: InsertSalary): Promise<Salary>;
 
   // Initiatives
-  getAllInitiatives(): Promise<Initiative[]>;
+  getAllInitiatives(industryId?: number): Promise<Initiative[]>;
   createInitiative(data: InsertInitiative): Promise<Initiative>;
 
   // Certifications
-  getAllCertifications(domainId?: number): Promise<Certification[]>;
+  getAllCertifications(domainId?: number, industryId?: number): Promise<Certification[]>;
   createCertification(data: InsertCertification): Promise<Certification>;
 
   // Companies
-  getAllCompanies(domainId?: number): Promise<Company[]>;
+  getAllCompanies(domainId?: number, industryId?: number): Promise<Company[]>;
   createCompany(data: InsertCompany): Promise<Company>;
   linkCompanyToDomain(companyId: number, domainId: number): Promise<void>;
 
@@ -89,7 +89,7 @@ export interface IStorage {
   updateSettings(data: Partial<InsertSettings>): Promise<Settings>;
 
   // Stats
-  getStats(): Promise<{ domainCount: number; roleCount: number; chartCount: number }>;
+  getStats(industryId?: number): Promise<{ domainCount: number; roleCount: number; chartCount: number }>;
 
   // Users (existing)
   getUser(id: string): Promise<User | undefined>;
@@ -216,26 +216,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Salaries
-  async getAllSalaries(domainId?: number): Promise<Salary[]> {
+  async getAllSalaries(domainId?: number, industryId?: number): Promise<Salary[]> {
     if (domainId) {
       return db.select().from(salaries).where(eq(salaries.domainId, domainId));
+    }
+    if (industryId) {
+      const domainIds = (await db.select({ id: domains.id }).from(domains).where(eq(domains.industryId, industryId))).map((d) => d.id);
+      if (domainIds.length === 0) return [];
+      return db.select().from(salaries).where(inArray(salaries.domainId, domainIds));
     }
     return db.select().from(salaries);
   }
 
-  async getSalaryStats(): Promise<{ domain: string; minSalary: number; maxSalary: number; avgSalary: number }[]> {
-    const result = await db
+  async getSalaryStats(industryId?: number): Promise<{ domain: string; minSalary: number; maxSalary: number; avgSalary: number }[]> {
+    const baseQuery = db
       .select({
         domainId: salaries.domainId,
         minSalary: sql<number>`MIN(${salaries.minSalary})`,
         maxSalary: sql<number>`MAX(${salaries.maxSalary})`,
         avgSalary: sql<number>`AVG((${salaries.minSalary} + ${salaries.maxSalary}) / 2)`,
       })
-      .from(salaries)
-      .groupBy(salaries.domainId);
+      .from(salaries);
+
+    const result = industryId
+      ? await baseQuery
+          .innerJoin(domains, eq(salaries.domainId, domains.id))
+          .where(eq(domains.industryId, industryId))
+          .groupBy(salaries.domainId)
+      : await baseQuery.groupBy(salaries.domainId);
 
     const domainIds = result.map((r) => r.domainId);
-    const domainList = await db.select().from(domains).where(inArray(domains.id, domainIds));
+    const domainList = domainIds.length === 0 ? [] : await db.select().from(domains).where(inArray(domains.id, domainIds));
     const domainMap = new Map(domainList.map((d) => [d.id, d.name]));
 
     return result.map((r) => ({
@@ -252,7 +263,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Initiatives
-  async getAllInitiatives(): Promise<Initiative[]> {
+  async getAllInitiatives(industryId?: number): Promise<Initiative[]> {
+    if (industryId) {
+      return db.select().from(initiatives).where(eq(initiatives.industryId, industryId)).orderBy(initiatives.timeframeStart);
+    }
     return db.select().from(initiatives).orderBy(initiatives.timeframeStart);
   }
 
@@ -262,8 +276,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Certifications
-  async getAllCertifications(domainId?: number): Promise<Certification[]> {
-    // For now, return all certifications; domain filtering would require role-certification links
+  async getAllCertifications(domainId?: number, industryId?: number): Promise<Certification[]> {
+    // Industry filter returns industry-pinned certs PLUS shared certs (industryId IS NULL).
+    if (industryId) {
+      return db
+        .select()
+        .from(certifications)
+        .where(or(eq(certifications.industryId, industryId), isNull(certifications.industryId)))
+        .orderBy(certifications.name);
+    }
+    // domainId is not yet wired (requires role-certification roll-up); fall through to all.
     return db.select().from(certifications).orderBy(certifications.name);
   }
 
@@ -273,12 +295,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Companies
-  async getAllCompanies(domainId?: number): Promise<Company[]> {
+  async getAllCompanies(domainId?: number, industryId?: number): Promise<Company[]> {
     if (domainId) {
       const links = await db.select().from(domainCompanies).where(eq(domainCompanies.domainId, domainId));
       const companyIds = links.map((l) => l.companyId);
       if (companyIds.length === 0) return [];
-      return db.select().from(companies).where(inArray(companies.id, companyIds));
+      return db.select().from(companies).where(inArray(companies.id, companyIds)).orderBy(companies.name);
+    }
+    if (industryId) {
+      const industryDomainIds = (await db.select({ id: domains.id }).from(domains).where(eq(domains.industryId, industryId))).map((d) => d.id);
+      if (industryDomainIds.length === 0) return [];
+      const links = await db.select().from(domainCompanies).where(inArray(domainCompanies.domainId, industryDomainIds));
+      const companyIds = Array.from(new Set(links.map((l) => l.companyId)));
+      if (companyIds.length === 0) return [];
+      return db.select().from(companies).where(inArray(companies.id, companyIds)).orderBy(companies.name);
     }
     return db.select().from(companies).orderBy(companies.name);
   }
@@ -346,7 +376,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Stats
-  async getStats(): Promise<{ domainCount: number; roleCount: number; chartCount: number }> {
+  async getStats(industryId?: number): Promise<{ domainCount: number; roleCount: number; chartCount: number }> {
+    if (industryId) {
+      const [domainResult] = await db.select({ count: sql<number>`COUNT(*)` }).from(domains).where(eq(domains.industryId, industryId));
+      const industryDomainIds = (await db.select({ id: domains.id }).from(domains).where(eq(domains.industryId, industryId))).map((d) => d.id);
+      let roleCount = 0;
+      if (industryDomainIds.length > 0) {
+        const subdomainIds = (await db.select({ id: subdomains.id }).from(subdomains).where(inArray(subdomains.domainId, industryDomainIds))).map((s) => s.id);
+        if (subdomainIds.length > 0) {
+          const [roleResult] = await db.select({ count: sql<number>`COUNT(*)` }).from(roles).where(inArray(roles.subdomainId, subdomainIds));
+          roleCount = Number(roleResult?.count) || 0;
+        }
+      }
+      return {
+        domainCount: Number(domainResult?.count) || 0,
+        roleCount,
+        chartCount: 30,
+      };
+    }
     const [domainResult] = await db.select({ count: sql<number>`COUNT(*)` }).from(domains);
     const [roleResult] = await db.select({ count: sql<number>`COUNT(*)` }).from(roles);
     return {

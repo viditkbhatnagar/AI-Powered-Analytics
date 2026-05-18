@@ -138,6 +138,7 @@ export type InsertSalary = z.infer<typeof insertSalarySchema>;
 // ============ INITIATIVES (CO1) ============
 export const initiatives = pgTable("initiatives", {
   id: serial("id").primaryKey(),
+  industryId: integer("industry_id").references(() => industries.id, { onDelete: "cascade" }),
   scope: text("scope").notNull(),
   name: text("name").notNull(),
   domainsImpacted: text("domains_impacted").array().notNull(),
@@ -159,6 +160,7 @@ export type InsertInitiative = z.infer<typeof insertInitiativeSchema>;
 // ============ CERTIFICATIONS ============
 export const certifications = pgTable("certifications", {
   id: serial("id").primaryKey(),
+  industryId: integer("industry_id").references(() => industries.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   provider: text("provider").notNull(),
   description: text("description").notNull(),

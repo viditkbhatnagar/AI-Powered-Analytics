@@ -4,12 +4,18 @@ import multer from "multer";
 import { storage } from "./storage";
 import { seedDatabase } from "./seed";
 import { extractDataWithAI } from "./ai-extraction";
+import { registerChatRoutes } from "./replit_integrations/chat/routes";
+import { registerImageRoutes } from "./replit_integrations/image/routes";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(server: Server, app: Express): Promise<void> {
   // Seed database on startup
   await seedDatabase();
+
+  // Register AI integration routes
+  registerChatRoutes(app);
+  registerImageRoutes(app);
 
   // Health check
   app.get("/api/health", (req, res) => {
@@ -19,7 +25,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   // Stats
   app.get("/api/stats", async (req, res) => {
     try {
-      const stats = await storage.getStats();
+      const industryId = req.query.industry ? parseInt(req.query.industry as string) : undefined;
+      const stats = await storage.getStats(industryId);
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch stats" });
@@ -111,7 +118,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   // Trends/Initiatives
   app.get("/api/trends", async (req, res) => {
     try {
-      const initiatives = await storage.getAllInitiatives();
+      const industryId = req.query.industry ? parseInt(req.query.industry as string) : undefined;
+      const initiatives = await storage.getAllInitiatives(industryId);
       res.json(initiatives);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch initiatives" });
@@ -121,7 +129,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   // Alias for initiatives
   app.get("/api/initiatives", async (req, res) => {
     try {
-      const initiatives = await storage.getAllInitiatives();
+      const industryId = req.query.industry ? parseInt(req.query.industry as string) : undefined;
+      const initiatives = await storage.getAllInitiatives(industryId);
       res.json(initiatives);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch initiatives" });
@@ -132,7 +141,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   app.get("/api/salaries", async (req, res) => {
     try {
       const domainId = req.query.domain ? parseInt(req.query.domain as string) : undefined;
-      const salaries = await storage.getAllSalaries(domainId);
+      const industryId = req.query.industry ? parseInt(req.query.industry as string) : undefined;
+      const salaries = await storage.getAllSalaries(domainId, industryId);
       res.json(salaries);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch salaries" });
@@ -151,7 +161,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
 
   app.get("/api/salaries/stats", async (req, res) => {
     try {
-      const stats = await storage.getSalaryStats();
+      const industryId = req.query.industry ? parseInt(req.query.industry as string) : undefined;
+      const stats = await storage.getSalaryStats(industryId);
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch salary stats" });
@@ -162,7 +173,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   app.get("/api/certifications", async (req, res) => {
     try {
       const domainId = req.query.domain ? parseInt(req.query.domain as string) : undefined;
-      const certifications = await storage.getAllCertifications(domainId);
+      const industryId = req.query.industry ? parseInt(req.query.industry as string) : undefined;
+      const certifications = await storage.getAllCertifications(domainId, industryId);
       res.json(certifications);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch certifications" });
@@ -183,7 +195,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   app.get("/api/companies", async (req, res) => {
     try {
       const domainId = req.query.domain ? parseInt(req.query.domain as string) : undefined;
-      const companies = await storage.getAllCompanies(domainId);
+      const industryId = req.query.industry ? parseInt(req.query.industry as string) : undefined;
+      const companies = await storage.getAllCompanies(domainId, industryId);
       res.json(companies);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch companies" });
@@ -209,35 +222,43 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   app.get("/api/charts/prebuilt/:id", async (req, res) => {
     try {
       const chartId = req.params.id;
+      const industryId = req.query.industry ? parseInt(req.query.industry as string) : undefined;
       const charts = getPrebuiltCharts();
       const chart = charts.find((c) => c.id === chartId);
       if (!chart) {
         return res.status(404).json({ error: "Chart not found" });
       }
-      
-      // Fetch relevant data based on chart data source
-      let data = {};
+
+      // Fetch relevant data based on chart data source, scoped to the selected industry if provided.
+      let data: unknown = {};
       switch (chart.dataSource) {
         case "initiatives":
-          data = await storage.getAllInitiatives();
+          data = await storage.getAllInitiatives(industryId);
           break;
         case "domains":
-          data = await storage.getAllDomains();
+          data = await storage.getAllDomains(industryId);
           break;
         case "salaries":
-          data = await storage.getAllSalaries();
+          data = await storage.getAllSalaries(undefined, industryId);
           break;
         case "certifications":
-          data = await storage.getAllCertifications();
+          data = await storage.getAllCertifications(undefined, industryId);
           break;
         case "companies":
-          data = await storage.getAllCompanies();
+          data = await storage.getAllCompanies(undefined, industryId);
           break;
-        case "roles":
-          data = await storage.getAllRoles();
+        case "roles": {
+          if (industryId) {
+            const industryDomains = await storage.getAllDomains(industryId);
+            const roleArrays = await Promise.all(industryDomains.map((d) => storage.getAllRoles(d.id)));
+            data = roleArrays.flat();
+          } else {
+            data = await storage.getAllRoles();
+          }
           break;
+        }
       }
-      
+
       res.json({ ...chart, data });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch chart" });
