@@ -229,10 +229,13 @@ export default function VisualizationsPage() {
         ) : (
           filteredCharts.map((chart) => {
             const CategoryIcon = categoryIcons[chart.category] || BarChart3;
-            
+            // Industry-scoped title and description so switching industries visibly changes every card.
+            const industryShortName = current?.name.replace(/\s*\(.*?\)$/, "") ?? "";
+            const displayName = current ? `${industryShortName} ${chart.name}` : chart.name;
+
             return (
               <Card
-                key={chart.id}
+                key={`${chart.id}-${industryId ?? "none"}`}
                 className="group overflow-hidden transition-all hover:shadow-lg hover:shadow-primary/5 border-border/50"
                 data-testid={`card-chart-${chart.id}`}
               >
@@ -248,7 +251,7 @@ export default function VisualizationsPage() {
                     showToolbox={false}
                     isPreview={true}
                   />
-                  
+
                   {/* Hover Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm opacity-0 transition-all duration-300 group-hover:opacity-100 z-10">
                     <Link href={`/visualizations/${chart.id}`}>
@@ -258,7 +261,7 @@ export default function VisualizationsPage() {
                       </Button>
                     </Link>
                   </div>
-                  
+
                   {/* Chart Number Badge */}
                   <div className="absolute top-2 right-2 z-20">
                     <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm text-xs font-mono">
@@ -266,15 +269,20 @@ export default function VisualizationsPage() {
                     </Badge>
                   </div>
                 </div>
-                
+
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base leading-tight">{chart.name}</CardTitle>
+                  <CardTitle className="text-base leading-tight">{displayName}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="mb-3 text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                     {chart.description}
                   </p>
                   <div className="flex flex-wrap gap-2">
+                    {current && (
+                      <Badge variant="default" className="text-xs">
+                        {industryShortName}
+                      </Badge>
+                    )}
                     <Badge variant="secondary" className="gap-1 text-xs">
                       <CategoryIcon className="h-3 w-3" />
                       {chart.category}

@@ -315,13 +315,16 @@ export default function VisualizationDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight">{chart.name}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {current ? `${current.name.replace(/\s*\(.*?\)$/, "")} ${chart.name}` : chart.name}
+              </h1>
               <Badge variant="secondary" className="gap-1">
                 <Sparkles className="h-3 w-3" />
                 ECharts
               </Badge>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
+              {current && <Badge variant="default">{current.name}</Badge>}
               <Badge variant="secondary">{chart.category}</Badge>
               <Badge variant="outline">{chart.chartType}</Badge>
             </div>
