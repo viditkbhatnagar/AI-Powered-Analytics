@@ -7,6 +7,8 @@ import {
   Upload,
   GitCompare,
   Settings,
+  MessageSquare,
+  ImageIcon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -20,12 +22,15 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { IndustrySwitcher } from "@/components/layout/industry-switcher";
 
 const mainNavItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Domains", url: "/domains", icon: Layers },
   { title: "Visualizations", url: "/visualizations", icon: BarChart3 },
   { title: "Dashboard Builder", url: "/dashboard-builder", icon: PanelLeft },
+  { title: "AI Chat", url: "/chat", icon: MessageSquare },
+  { title: "AI Images", url: "/ai-images", icon: ImageIcon },
   { title: "Upload Data", url: "/upload", icon: Upload },
   { title: "Compare", url: "/compare", icon: GitCompare },
 ];
@@ -56,6 +61,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        <IndustrySwitcher />
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>

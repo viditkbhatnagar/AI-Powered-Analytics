@@ -22,6 +22,7 @@ import {
 import { ChartRenderer, ChartRendererHandle } from "@/components/charts/chart-renderer";
 import type { PrebuiltChart, Initiative, Domain, Salary, Certification, Company, Role } from "@shared/schema";
 import { useState, useMemo, useRef, useCallback } from "react";
+import { useSelectedIndustry } from "@/hooks/use-industry";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
@@ -70,30 +71,39 @@ export default function VisualizationDetailPage() {
   const prevChart = currentIndex > 0 ? prebuiltCharts[currentIndex - 1] : null;
   const nextChart = currentIndex < prebuiltCharts.length - 1 ? prebuiltCharts[currentIndex + 1] : null;
 
-  // Fetch all required data based on chart's data source
+  const { current } = useSelectedIndustry();
+  const industryId = current?.id ?? null;
+  const q = (path: string) => (industryId ? `${path}?industry=${industryId}` : path);
+
+  // Fetch all required data based on chart's data source, scoped to the selected industry.
   const { data: initiatives, isLoading: loadingInitiatives } = useQuery<Initiative[]>({
-    queryKey: ['/api/initiatives'],
-    enabled: !!chart && ['initiatives'].includes(chart.dataSource),
+    queryKey: ['/api/initiatives', industryId],
+    queryFn: async () => (await fetch(q('/api/initiatives'))).json(),
+    enabled: !!chart && !!industryId && ['initiatives'].includes(chart.dataSource),
   });
 
   const { data: domains, isLoading: loadingDomains } = useQuery<(Domain & { subdomainCount?: number; roleCount?: number; companies?: string[] })[]>({
-    queryKey: ['/api/domains'],
-    enabled: !!chart && ['domains', 'salaries', 'companies'].includes(chart.dataSource),
+    queryKey: ['/api/domains', industryId],
+    queryFn: async () => (await fetch(q('/api/domains'))).json(),
+    enabled: !!chart && !!industryId && ['domains', 'salaries', 'companies'].includes(chart.dataSource),
   });
 
   const { data: salaries, isLoading: loadingSalaries } = useQuery<Salary[]>({
-    queryKey: ['/api/salaries'],
-    enabled: !!chart && ['salaries'].includes(chart.dataSource),
+    queryKey: ['/api/salaries', industryId],
+    queryFn: async () => (await fetch(q('/api/salaries'))).json(),
+    enabled: !!chart && !!industryId && ['salaries'].includes(chart.dataSource),
   });
 
   const { data: certifications, isLoading: loadingCertifications } = useQuery<Certification[]>({
-    queryKey: ['/api/certifications'],
-    enabled: !!chart && ['certifications'].includes(chart.dataSource),
+    queryKey: ['/api/certifications', industryId],
+    queryFn: async () => (await fetch(q('/api/certifications'))).json(),
+    enabled: !!chart && !!industryId && ['certifications'].includes(chart.dataSource),
   });
 
   const { data: companies, isLoading: loadingCompanies } = useQuery<Company[]>({
-    queryKey: ['/api/companies'],
-    enabled: !!chart && ['companies'].includes(chart.dataSource),
+    queryKey: ['/api/companies', industryId],
+    queryFn: async () => (await fetch(q('/api/companies'))).json(),
+    enabled: !!chart && !!industryId && ['companies'].includes(chart.dataSource),
   });
 
   const { data: roles, isLoading: loadingRoles } = useQuery<Role[]>({

@@ -2,12 +2,14 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface AppState {
+  selectedIndustryId: number | null;
   selectedDomains: number[];
   comparisonMode: boolean;
   dashboardBuilderState: {
     selectedFields: string[];
     currentChartType: string;
   };
+  setSelectedIndustryId: (id: number | null) => void;
   setSelectedDomains: (domains: number[]) => void;
   toggleComparisonMode: () => void;
   setDashboardBuilderState: (state: Partial<AppState["dashboardBuilderState"]>) => void;
@@ -19,12 +21,15 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
+      selectedIndustryId: null,
       selectedDomains: [],
       comparisonMode: false,
       dashboardBuilderState: {
         selectedFields: [],
         currentChartType: "bar",
       },
+      // Switching industries clears any cross-industry domain selections so comparisons don't mix verticals.
+      setSelectedIndustryId: (id) => set({ selectedIndustryId: id, selectedDomains: [] }),
       setSelectedDomains: (domains) => set({ selectedDomains: domains }),
       toggleComparisonMode: () => set((state) => ({ comparisonMode: !state.comparisonMode })),
       setDashboardBuilderState: (newState) =>

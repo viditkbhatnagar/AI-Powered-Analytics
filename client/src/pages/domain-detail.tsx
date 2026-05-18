@@ -81,6 +81,7 @@ export default function DomainDetailPage() {
     ? {
         min: Math.min(...domain.salaries.map((s) => s.minSalary)),
         max: Math.max(...domain.salaries.map((s) => s.maxSalary)),
+        currency: domain.salaries[0]?.currency ?? "AED",
       }
     : null;
 
@@ -160,10 +161,14 @@ export default function DomainDetailPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {salaryRange
-                ? `${(salaryRange.min / 1000).toFixed(0)}K-${(salaryRange.max / 1000).toFixed(0)}K`
+                ? salaryRange.currency === "INR"
+                  ? `${(salaryRange.min / 100_000).toFixed(1)}–${(salaryRange.max / 100_000).toFixed(1)} LPA`
+                  : `${(salaryRange.min / 1000).toFixed(0)}K–${(salaryRange.max / 1000).toFixed(0)}K`
                 : "N/A"}
             </div>
-            <p className="text-xs text-muted-foreground">AED/month</p>
+            <p className="text-xs text-muted-foreground">
+              {salaryRange?.currency === "INR" ? "₹ per annum" : "AED/month"}
+            </p>
           </CardContent>
         </Card>
       </div>

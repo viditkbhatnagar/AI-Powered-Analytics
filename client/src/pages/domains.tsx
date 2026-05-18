@@ -1,5 +1,7 @@
-import { Link, useSearch } from "wouter";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useSelectedIndustry } from "@/hooks/use-industry";
+import { ShoppingBag } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +53,16 @@ const domainIcons: Record<string, React.ElementType> = {
   "map-pin": MapPin,
   clipboard: ClipboardList,
   cpu: Cpu,
+  users: Users,
+  luggage: Briefcase,
+  "plane-takeoff": Plane,
+  ticket: FileCheck,
+  scissors: Wrench,
+  store: Building2,
+  paintbrush: Box,
+  "check-circle": FileCheck,
+  monitor: Cpu,
+  "shopping-bag": ShoppingBag,
   default: Package,
 };
 
@@ -62,8 +74,8 @@ interface DomainWithCounts extends Domain {
 
 export default function DomainsPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const searchParams = useSearch();
-  const industryId = new URLSearchParams(searchParams).get("industry");
+  const { current } = useSelectedIndustry();
+  const industryId = current?.id ?? null;
 
   const { data: domains, isLoading } = useQuery<DomainWithCounts[]>({
     queryKey: ["/api/domains", industryId],
@@ -73,6 +85,7 @@ export default function DomainsPage() {
       if (!res.ok) throw new Error("Failed to fetch domains");
       return res.json();
     },
+    enabled: !!industryId,
   });
 
   const filteredDomains = (domains || []).filter((domain) =>
@@ -84,10 +97,12 @@ export default function DomainsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
-            Supply Chain & Logistics Domains
+            {current ? `${current.name} Domains` : "Domains"}
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Explore 18 specialized domains within the UAE supply chain industry
+            {current
+              ? `${(domains?.length ?? 0)} specialized domains within ${current.name}`
+              : "Select an industry to explore its domains"}
           </p>
         </div>
         <div className="relative w-full md:w-80">

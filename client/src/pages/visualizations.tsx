@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { ChartRenderer } from "@/components/charts/chart-renderer";
 import type { PrebuiltChart, Initiative, Domain, Salary, Certification, Company, Role } from "@shared/schema";
+import { useSelectedIndustry } from "@/hooks/use-industry";
 
 const categoryIcons: Record<string, React.ElementType> = {
   trends: TrendingUp,
@@ -66,27 +67,44 @@ export default function VisualizationsPage() {
   const categoryParam = new URLSearchParams(searchParams).get("category") || "all";
   const [activeCategory, setActiveCategory] = useState(categoryParam);
 
-  // Fetch all data upfront for chart previews
+  const { current } = useSelectedIndustry();
+  const industryId = current?.id ?? null;
+  const q = (path: string) => (industryId ? `${path}?industry=${industryId}` : path);
+
+  // Fetch all data scoped to the selected industry so chart previews stay in sync with the sidebar switcher.
   const { data: initiatives, isLoading: loadingInitiatives } = useQuery<Initiative[]>({
-    queryKey: ['/api/initiatives'],
+    queryKey: ['/api/initiatives', industryId],
+    queryFn: async () => (await fetch(q('/api/initiatives'))).json(),
+    enabled: !!industryId,
   });
 
   const { data: domains, isLoading: loadingDomains } = useQuery<(Domain & { subdomainCount?: number; roleCount?: number; companies?: string[] })[]>({
-    queryKey: ['/api/domains'],
+    queryKey: ['/api/domains', industryId],
+    queryFn: async () => (await fetch(q('/api/domains'))).json(),
+    enabled: !!industryId,
   });
 
   const { data: salaries, isLoading: loadingSalaries } = useQuery<Salary[]>({
-    queryKey: ['/api/salaries'],
+    queryKey: ['/api/salaries', industryId],
+    queryFn: async () => (await fetch(q('/api/salaries'))).json(),
+    enabled: !!industryId,
   });
 
   const { data: certifications, isLoading: loadingCertifications } = useQuery<Certification[]>({
-    queryKey: ['/api/certifications'],
+    queryKey: ['/api/certifications', industryId],
+    queryFn: async () => (await fetch(q('/api/certifications'))).json(),
+    enabled: !!industryId,
   });
 
   const { data: companies, isLoading: loadingCompanies } = useQuery<Company[]>({
-    queryKey: ['/api/companies'],
+    queryKey: ['/api/companies', industryId],
+    queryFn: async () => (await fetch(q('/api/companies'))).json(),
+    enabled: !!industryId,
   });
 
+  // Roles aren't industry-scoped at /api/roles (would require a subdomain join client-side).
+  // The chart-renderer pulls from /api/charts/prebuilt which IS scoped, so this list is only
+  // used for preview thumbnails where minor over-rendering is acceptable.
   const { data: roles, isLoading: loadingRoles } = useQuery<Role[]>({
     queryKey: ['/api/roles'],
   });
@@ -137,6 +155,7 @@ export default function VisualizationsPage() {
           </div>
           <p className="mt-1 text-muted-foreground">
             Explore 30 interactive charts powered by Apache ECharts
+            {current ? ` — scoped to ${current.name}` : ""}
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">

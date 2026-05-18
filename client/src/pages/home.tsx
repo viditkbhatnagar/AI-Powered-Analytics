@@ -15,8 +15,10 @@ import {
   Users,
   Upload,
   ArrowRight,
+  ShoppingBag,
 } from "lucide-react";
 import type { Industry } from "@shared/schema";
+import { useSelectedIndustry } from "@/hooks/use-industry";
 
 const industryIcons: Record<string, React.ElementType> = {
   truck: Truck,
@@ -24,20 +26,28 @@ const industryIcons: Record<string, React.ElementType> = {
   plane: Plane,
   warehouse: Warehouse,
   package: Package,
+  "shopping-bag": ShoppingBag,
   default: Package,
 };
 
 export default function HomePage() {
-  const { data: industries, isLoading: industriesLoading } = useQuery<Industry[]>({
-    queryKey: ["/api/industries"],
-  });
+  const { industries: industryList, current, setSelectedIndustryId } = useSelectedIndustry();
+  const industries = industryList;
+  const industriesLoading = industries.length === 0;
 
   const { data: stats, isLoading: statsLoading } = useQuery<{
     domainCount: number;
     roleCount: number;
     chartCount: number;
   }>({
-    queryKey: ["/api/stats"],
+    queryKey: ["/api/stats", current?.id],
+    queryFn: async () => {
+      const url = current?.id ? `/api/stats?industry=${current.id}` : "/api/stats";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    },
+    enabled: !!current,
   });
 
   return (
@@ -49,7 +59,7 @@ export default function HomePage() {
           </h1>
           <p className="max-w-2xl text-muted-foreground">
             Explore industry trends, salary benchmarks, career domains, and certification
-            pathways for the UAE Supply Chain & Logistics industry. Make data-driven
+            pathways for {current?.name ?? "your selected industry"}. Make data-driven
             career decisions with interactive visualizations.
           </p>
         </div>
@@ -148,10 +158,11 @@ export default function HomePage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <Link href={`/domains?industry=${industry.id}`}>
+                      <Link href="/domains">
                         <Button
                           className="w-full group-hover:bg-primary"
                           variant="outline"
+                          onClick={() => setSelectedIndustryId(industry.id)}
                           data-testid={`button-explore-${industry.id}`}
                         >
                           Explore Domains

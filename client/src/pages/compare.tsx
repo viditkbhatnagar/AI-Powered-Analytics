@@ -22,6 +22,8 @@ import {
   Package,
 } from "lucide-react";
 import type { Domain, Salary, Certification, Role } from "@shared/schema";
+import { useSelectedIndustry } from "@/hooks/use-industry";
+import { formatCurrency, detectCurrency } from "@/lib/charts/utils";
 
 interface DomainWithDetails extends Domain {
   roleCount?: number;
@@ -37,22 +39,35 @@ export default function ComparePage() {
   );
   const [comparisonType, setComparisonType] = useState("salary");
 
-  // Fetch all required data
+  const { current } = useSelectedIndustry();
+  const industryId = current?.id ?? null;
+  const q = (path: string) => (industryId ? `${path}?industry=${industryId}` : path);
+
+  // Fetch all required data scoped to the selected industry.
   const { data: domains, isLoading: loadingDomains } = useQuery<DomainWithDetails[]>({
-    queryKey: ["/api/domains"],
+    queryKey: ["/api/domains", industryId],
+    queryFn: async () => (await fetch(q("/api/domains"))).json(),
+    enabled: !!industryId,
   });
 
   const { data: salaries, isLoading: loadingSalaries } = useQuery<Salary[]>({
-    queryKey: ["/api/salaries"],
+    queryKey: ["/api/salaries", industryId],
+    queryFn: async () => (await fetch(q("/api/salaries"))).json(),
+    enabled: !!industryId,
   });
 
   const { data: certifications, isLoading: loadingCerts } = useQuery<Certification[]>({
-    queryKey: ["/api/certifications"],
+    queryKey: ["/api/certifications", industryId],
+    queryFn: async () => (await fetch(q("/api/certifications"))).json(),
+    enabled: !!industryId,
   });
 
   const { data: roles, isLoading: loadingRoles } = useQuery<Role[]>({
     queryKey: ["/api/roles"],
   });
+
+  const currency = detectCurrency(salaries ?? []);
+  const isInr = currency === "INR";
 
   const handleDomainSelect = (slot: number, domainId: string) => {
     const newSelection = [...selectedDomains];
@@ -203,7 +218,7 @@ export default function ComparePage() {
     );
   };
 
-  const formatSalary = (value: number) => value.toLocaleString();
+  const formatSalary = (value: number) => formatCurrency(value, currency);
 
   const isLoading = loadingDomains || loadingSalaries || loadingCerts || loadingRoles;
 
@@ -303,7 +318,7 @@ export default function ComparePage() {
                           </div>
                           <div>
                             <CardTitle className="text-lg">{domain.name}</CardTitle>
-                            <CardDescription>Salary Overview (AED/month)</CardDescription>
+                            <CardDescription>{isInr ? "Salary Overview (₹ LPA)" : "Salary Overview (AED/month)"}</CardDescription>
                           </div>
                         </div>
                       </CardHeader>
@@ -489,7 +504,7 @@ export default function ComparePage() {
                         const avg = Math.round((salaryData.entry.min + salaryData.entry.max) / 2);
                         return (
                           <td key={domain.id} className="p-3 font-medium">
-                            {formatSalary(avg)} AED
+                            {formatSalary(avg)}
                           </td>
                         );
                       })}
@@ -500,7 +515,7 @@ export default function ComparePage() {
                         const salaryData = getSalaryDataForDomain(domain.id);
                         return (
                           <td key={domain.id} className="p-3 font-medium">
-                            {formatSalary(salaryData.executive.max)} AED
+                            {formatSalary(salaryData.executive.max)}
                           </td>
                         );
                       })}

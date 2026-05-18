@@ -6,11 +6,14 @@
 import type { EChartsOption } from 'echarts';
 import type { Salary, Domain } from '@shared/schema';
 import { getChartColors, animationConfig } from '../theme';
-import { 
-  hexToRgba, 
-  createGradient, 
-  formatCurrency, 
+import {
+  hexToRgba,
+  createGradient,
+  formatCurrency,
   formatNumber,
+  formatSalaryCompact,
+  salaryAxisLabel,
+  detectCurrency,
   getSalaryByDomain,
   getSalaryByLevel,
   getSalaryHeatmapData,
@@ -24,6 +27,7 @@ export function createSalaryRangeByDomainConfig(
   isDark: boolean
 ): EChartsOption {
   const colors = getChartColors(isDark);
+  const currency = detectCurrency(salaries);
   
   const salaryByDomain = getSalaryByDomain(salaries, domains);
   const sorted = sortByKey(salaryByDomain, 'avgSalary', true).slice(0, 12);
@@ -49,15 +53,15 @@ export function createSalaryRangeByDomainConfig(
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
               <div>
                 <div style="color: ${colors.textSecondary}; font-size: 11px;">Min</div>
-                <div style="font-weight: 600;">${formatCurrency(data.minSalary)}</div>
+                <div style="font-weight: 600;">${formatCurrency(data.minSalary, currency)}</div>
               </div>
               <div>
                 <div style="color: ${colors.textSecondary}; font-size: 11px;">Max</div>
-                <div style="font-weight: 600;">${formatCurrency(data.maxSalary)}</div>
+                <div style="font-weight: 600;">${formatCurrency(data.maxSalary, currency)}</div>
               </div>
               <div style="grid-column: span 2;">
                 <div style="color: ${colors.textSecondary}; font-size: 11px;">Average</div>
-                <div style="font-size: 20px; font-weight: 700; color: ${colors.primary[0]};">${formatCurrency(data.avgSalary)}</div>
+                <div style="font-size: 20px; font-weight: 700; color: ${colors.primary[0]};">${formatCurrency(data.avgSalary, currency)}</div>
               </div>
             </div>
           </div>
@@ -84,11 +88,11 @@ export function createSalaryRangeByDomainConfig(
     },
     yAxis: {
       type: 'value',
-      name: 'Salary (AED/month)',
+      name: salaryAxisLabel(currency),
       nameTextStyle: { color: colors.textSecondary },
       axisLabel: {
         color: colors.textSecondary,
-        formatter: (val: number) => formatNumber(val, true),
+        formatter: (val: number) => formatSalaryCompact(val, currency),
       },
       splitLine: { lineStyle: { color: colors.splitLine, type: 'dashed' } },
     },
@@ -120,6 +124,7 @@ export function createRoleWiseComparisonConfig(
   isDark: boolean
 ): EChartsOption {
   const colors = getChartColors(isDark);
+  const currency = detectCurrency(salaries);
   
   const levels = ['ENTRY', 'MID', 'SENIOR', 'EXECUTIVE'];
   const levelLabels = ['Entry', 'Mid-Level', 'Senior', 'Executive'];
@@ -139,7 +144,7 @@ export function createRoleWiseComparisonConfig(
               <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                 <span style="color: ${p.color};">●</span>
                 <span style="margin-left: 8px; flex: 1;">${p.seriesName}</span>
-                <span style="font-weight: 600;">${formatCurrency(p.value)}</span>
+                <span style="font-weight: 600;">${formatCurrency(p.value, currency)}</span>
               </div>
             `).join('')}
           </div>
@@ -166,11 +171,11 @@ export function createRoleWiseComparisonConfig(
     },
     yAxis: {
       type: 'value',
-      name: 'Salary (AED)',
+      name: salaryAxisLabel(currency),
       nameTextStyle: { color: colors.textSecondary },
       axisLabel: {
         color: colors.textSecondary,
-        formatter: (val: number) => formatNumber(val, true),
+        formatter: (val: number) => formatSalaryCompact(val, currency),
       },
       splitLine: { lineStyle: { color: colors.splitLine, type: 'dashed' } },
     },
@@ -216,6 +221,7 @@ export function createHighestPayingDomainsConfig(
   isDark: boolean
 ): EChartsOption {
   const colors = getChartColors(isDark);
+  const currency = detectCurrency(salaries);
   
   const salaryByDomain = getSalaryByDomain(salaries, domains);
   const sorted = sortByKey(salaryByDomain, 'maxSalary', true).slice(0, 10);
@@ -230,7 +236,7 @@ export function createHighestPayingDomainsConfig(
         return `
           <div>
             <div style="font-weight: 600; margin-bottom: 4px;">${data.domainName}</div>
-            <div style="font-size: 20px; font-weight: 700; color: ${colors.primary[0]};">${formatCurrency(data.maxSalary)}</div>
+            <div style="font-size: 20px; font-weight: 700; color: ${colors.primary[0]};">${formatCurrency(data.maxSalary, currency)}</div>
             <div style="color: ${colors.textSecondary}; font-size: 11px; margin-top: 4px;">Maximum salary</div>
           </div>
         `;
@@ -246,7 +252,7 @@ export function createHighestPayingDomainsConfig(
       type: 'value',
       axisLabel: {
         color: colors.textSecondary,
-        formatter: (val: number) => formatNumber(val, true),
+        formatter: (val: number) => formatSalaryCompact(val, currency),
       },
       splitLine: { lineStyle: { color: colors.splitLine, type: 'dashed' } },
     },
@@ -284,7 +290,7 @@ export function createHighestPayingDomainsConfig(
           color: colors.textSecondary,
           fontSize: 11,
           fontWeight: 600,
-          formatter: (params: any) => formatCurrency(params.value),
+          formatter: (params: any) => formatCurrency(params.value, currency),
         },
       },
     ],
@@ -297,6 +303,7 @@ export function createSalaryDistributionConfig(
   isDark: boolean
 ): EChartsOption {
   const colors = getChartColors(isDark);
+  const currency = detectCurrency(salaries);
   
   // Create histogram bins
   const allSalaries = salaries.flatMap(s => [s.minSalary, s.maxSalary]);
@@ -322,7 +329,7 @@ export function createSalaryDistributionConfig(
         const rangeStart = Math.floor(min / binSize) * binSize + idx * binSize;
         return `
           <div>
-            <div style="font-weight: 600; margin-bottom: 4px;">${formatCurrency(rangeStart)} - ${formatCurrency(rangeStart + binSize)}</div>
+            <div style="font-weight: 600; margin-bottom: 4px;">${formatCurrency(rangeStart, currency)} - ${formatCurrency(rangeStart + binSize, currency)}</div>
             <div style="font-size: 20px; font-weight: 700; color: ${colors.primary[0]};">${params[0].value} entries</div>
           </div>
         `;
@@ -337,7 +344,7 @@ export function createSalaryDistributionConfig(
     xAxis: {
       type: 'category',
       data: binLabels,
-      name: 'Salary Range (AED)',
+      name: salaryAxisLabel(currency),
       nameLocation: 'middle',
       nameGap: 40,
       nameTextStyle: { color: colors.textSecondary },
@@ -380,6 +387,7 @@ export function createDomainSalaryHeatmapConfig(
   isDark: boolean
 ): EChartsOption {
   const colors = getChartColors(isDark);
+  const currency = detectCurrency(salaries);
   
   const { data, xLabels, yLabels } = getSalaryHeatmapData(salaries, domains);
   const maxValue = Math.max(...data.map(d => d[2]));
@@ -394,7 +402,7 @@ export function createDomainSalaryHeatmapConfig(
           <div>
             <div style="font-weight: 600; margin-bottom: 4px;">${yLabels[y]}</div>
             <div style="color: ${colors.textSecondary}; font-size: 11px; margin-bottom: 4px;">${xLabels[x]} Level</div>
-            <div style="font-size: 20px; font-weight: 700; color: ${colors.primary[0]};">${formatCurrency(value)}</div>
+            <div style="font-size: 20px; font-weight: 700; color: ${colors.primary[0]};">${formatCurrency(value, currency)}</div>
           </div>
         `;
       },
@@ -467,6 +475,7 @@ export function createSalaryProgressionConfig(
   isDark: boolean
 ): EChartsOption {
   const colors = getChartColors(isDark);
+  const currency = detectCurrency(salaries);
   
   const salaryByLevel = getSalaryByLevel(salaries);
   const levels = ['Entry', 'Mid-Level', 'Senior', 'Executive'];
@@ -488,7 +497,7 @@ export function createSalaryProgressionConfig(
       formatter: (params: any) => {
         const idx = params[0].dataIndex;
         if (idx === 4) {
-          return `<div style="font-weight: 600;">Total: ${formatCurrency(total)}</div>`;
+          return `<div style="font-weight: 600;">Total: ${formatCurrency(total, currency)}</div>`;
         }
         const level = levels[idx];
         const value = salaryByLevel[idx].avgSalary;
@@ -496,8 +505,8 @@ export function createSalaryProgressionConfig(
         return `
           <div>
             <div style="font-weight: 600; margin-bottom: 4px;">${level}</div>
-            <div style="font-size: 18px; font-weight: 700; color: ${colors.primary[0]};">${formatCurrency(value)}</div>
-            ${idx > 0 ? `<div style="color: ${colors.positive}; font-size: 12px; margin-top: 4px;">+${formatCurrency(increment)}</div>` : ''}
+            <div style="font-size: 18px; font-weight: 700; color: ${colors.primary[0]};">${formatCurrency(value, currency)}</div>
+            ${idx > 0 ? `<div style="color: ${colors.positive}; font-size: 12px; margin-top: 4px;">+${formatCurrency(increment, currency)}</div>` : ''}
           </div>
         `;
       },
@@ -519,7 +528,7 @@ export function createSalaryProgressionConfig(
       type: 'value',
       axisLabel: {
         color: colors.textSecondary,
-        formatter: (val: number) => formatNumber(val, true),
+        formatter: (val: number) => formatSalaryCompact(val, currency),
       },
       splitLine: { lineStyle: { color: colors.splitLine, type: 'dashed' } },
     },
@@ -542,8 +551,8 @@ export function createSalaryProgressionConfig(
           color: colors.textSecondary,
           fontSize: 11,
           formatter: (params: any) => {
-            if (params.dataIndex === 4) return formatCurrency(total);
-            return formatCurrency(salaryByLevel[params.dataIndex].avgSalary);
+            if (params.dataIndex === 4) return formatCurrency(total, currency);
+            return formatCurrency(salaryByLevel[params.dataIndex].avgSalary, currency);
           },
         },
         data: [
@@ -573,6 +582,7 @@ export function createEntryVsMaxGapConfig(
   isDark: boolean
 ): EChartsOption {
   const colors = getChartColors(isDark);
+  const currency = detectCurrency(salaries);
   
   const salaryByDomain = getSalaryByDomain(salaries, domains);
   const sorted = sortByKey(salaryByDomain, 'maxSalary', true).slice(0, 10);
@@ -589,16 +599,16 @@ export function createEntryVsMaxGapConfig(
             <div style="font-weight: 600; margin-bottom: 8px;">${data.domainName}</div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
               <span style="color: ${colors.textSecondary};">Entry</span>
-              <span style="font-weight: 600;">${formatCurrency(data.minSalary)}</span>
+              <span style="font-weight: 600;">${formatCurrency(data.minSalary, currency)}</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
               <span style="color: ${colors.textSecondary};">Max</span>
-              <span style="font-weight: 600;">${formatCurrency(data.maxSalary)}</span>
+              <span style="font-weight: 600;">${formatCurrency(data.maxSalary, currency)}</span>
             </div>
             <div style="border-top: 1px solid ${colors.axisLine}; padding-top: 8px; margin-top: 8px;">
               <div style="display: flex; justify-content: space-between;">
                 <span style="color: ${colors.textSecondary};">Gap</span>
-                <span style="font-weight: 700; color: ${colors.primary[0]};">${formatCurrency(gap)}</span>
+                <span style="font-weight: 700; color: ${colors.primary[0]};">${formatCurrency(gap, currency)}</span>
               </div>
             </div>
           </div>
@@ -615,7 +625,7 @@ export function createEntryVsMaxGapConfig(
       type: 'value',
       axisLabel: {
         color: colors.textSecondary,
-        formatter: (val: number) => formatNumber(val, true),
+        formatter: (val: number) => formatSalaryCompact(val, currency),
       },
       splitLine: { lineStyle: { color: colors.splitLine, type: 'dashed' } },
     },
@@ -684,6 +694,7 @@ export function createSalaryPercentilesConfig(
   isDark: boolean
 ): EChartsOption {
   const colors = getChartColors(isDark);
+  const currency = detectCurrency(salaries);
   
   const salaryByDomain = getSalaryByDomain(salaries, domains);
   const sorted = sortByKey(salaryByDomain, 'avgSalary', true).slice(0, 8);
@@ -714,37 +725,37 @@ export function createSalaryPercentilesConfig(
             <div style="display: grid; gap: 6px;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: ${colors.textSecondary}; font-size: 11px;">Maximum (P100)</span>
-                <span style="font-weight: 500;">${formatCurrency(data.maxSalary)}</span>
+                <span style="font-weight: 500;">${formatCurrency(data.maxSalary, currency)}</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: ${colors.textSecondary}; font-size: 11px;">90th Percentile</span>
-                <span style="font-weight: 500;">${formatCurrency(data.p90)}</span>
+                <span style="font-weight: 500;">${formatCurrency(data.p90, currency)}</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: ${colors.textSecondary}; font-size: 11px;">75th Percentile (Q3)</span>
-                <span style="font-weight: 500;">${formatCurrency(data.q3)}</span>
+                <span style="font-weight: 500;">${formatCurrency(data.q3, currency)}</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; background: ${hexToRgba(colors.primary[0], 0.1)}; padding: 4px 8px; border-radius: 4px; margin: 4px -8px;">
                 <span style="color: ${colors.primary[0]}; font-size: 12px; font-weight: 600;">Median</span>
-                <span style="font-weight: 700; color: ${colors.primary[0]}; font-size: 16px;">${formatCurrency(data.avgSalary)}</span>
+                <span style="font-weight: 700; color: ${colors.primary[0]}; font-size: 16px;">${formatCurrency(data.avgSalary, currency)}</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: ${colors.textSecondary}; font-size: 11px;">25th Percentile (Q1)</span>
-                <span style="font-weight: 500;">${formatCurrency(data.q1)}</span>
+                <span style="font-weight: 500;">${formatCurrency(data.q1, currency)}</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: ${colors.textSecondary}; font-size: 11px;">10th Percentile</span>
-                <span style="font-weight: 500;">${formatCurrency(data.p10)}</span>
+                <span style="font-weight: 500;">${formatCurrency(data.p10, currency)}</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: ${colors.textSecondary}; font-size: 11px;">Minimum (P0)</span>
-                <span style="font-weight: 500;">${formatCurrency(data.minSalary)}</span>
+                <span style="font-weight: 500;">${formatCurrency(data.minSalary, currency)}</span>
               </div>
             </div>
             <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid ${colors.axisLine};">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: ${colors.textSecondary}; font-size: 11px;">IQR Range</span>
-                <span style="font-weight: 600; color: ${colors.positive};">${formatCurrency(data.q3 - data.q1)}</span>
+                <span style="font-weight: 600; color: ${colors.positive};">${formatCurrency(data.q3 - data.q1, currency)}</span>
               </div>
             </div>
           </div>
@@ -771,11 +782,11 @@ export function createSalaryPercentilesConfig(
     },
     yAxis: {
       type: 'value',
-      name: 'Salary (AED/month)',
+      name: salaryAxisLabel(currency),
       nameTextStyle: { color: colors.textSecondary, fontSize: 11 },
       axisLabel: {
         color: colors.textSecondary,
-        formatter: (val: number) => formatNumber(val, true),
+        formatter: (val: number) => formatSalaryCompact(val, currency),
       },
       splitLine: { lineStyle: { color: colors.splitLine, type: 'dashed' } },
     },

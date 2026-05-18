@@ -14,12 +14,44 @@ export function formatNumber(value: number, compact = false): string {
 }
 
 export function formatCurrency(value: number, currency = 'AED'): string {
+  // INR salaries in this app are stored as annual rupees and shown in the LPA convention
+  // (₹3.5 LPA) which Indian users read more naturally than raw 350,000 rupees.
+  if (currency === 'INR') return formatINRLpa(value);
   return new Intl.NumberFormat('en-AE', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+// Format an annual INR amount as Lakhs Per Annum, the standard India compensation convention.
+// Examples: 350000 -> "₹3.5 LPA"; 2200000 -> "₹22 LPA"; 925000 -> "₹9.3 LPA".
+export function formatINRLpa(annualRupees: number): string {
+  const lakhs = annualRupees / 100_000;
+  const rounded = lakhs >= 10 ? Math.round(lakhs) : Math.round(lakhs * 10) / 10;
+  return `₹${rounded} LPA`;
+}
+
+// Shorter currency formatter for axes / tooltips where space matters.
+export function formatSalaryCompact(value: number, currency = 'AED'): string {
+  if (currency === 'INR') return formatINRLpa(value);
+  if (value >= 1000) return `${currency} ${(value / 1000).toFixed(0)}k`;
+  return `${currency} ${value}`;
+}
+
+// Axis label for salary charts. AED amounts are stored as monthly; INR as annual rupees shown as LPA.
+export function salaryAxisLabel(currency = 'AED'): string {
+  return currency === 'INR' ? 'Salary (₹ LPA)' : 'Salary (AED/month)';
+}
+
+// Pull a representative currency off a list of salary rows. All rows in an industry
+// share a currency, so the first defined value wins. Falls back to AED for legacy data.
+export function detectCurrency(rows: Array<{ currency?: string | null }>): string {
+  for (const r of rows) {
+    if (r?.currency) return r.currency;
+  }
+  return 'AED';
 }
 
 export function formatPercent(value: number, decimals = 0): string {
