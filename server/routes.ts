@@ -430,9 +430,9 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
 
 function getPrebuiltCharts() {
   return [
-    { id: "1", name: "UAE Initiatives Timeline", description: "Timeline showing 16 UAE government initiatives from 2020-2050", category: "trends", chartType: "gantt", library: "plotly", dataSource: "initiatives" },
+    { id: "1", name: "Initiatives Timeline", description: "Gantt-style timeline of government and industry initiatives", category: "trends", chartType: "gantt", library: "plotly", dataSource: "initiatives" },
     { id: "2", name: "Initiative KPI Dashboard", description: "Multi-gauge showing key performance indicators", category: "trends", chartType: "gauge", library: "echarts", dataSource: "initiatives" },
-    { id: "3", name: "Regional Distribution", description: "UAE map with initiatives by emirate", category: "trends", chartType: "map", library: "echarts", dataSource: "initiatives" },
+    { id: "3", name: "Regional Distribution", description: "Initiatives grouped by region or scope", category: "trends", chartType: "map", library: "echarts", dataSource: "initiatives" },
     { id: "4", name: "Sector Impact Analysis", description: "Sankey diagram showing initiative to domain impact", category: "trends", chartType: "sankey", library: "echarts", dataSource: "initiatives" },
     { id: "5", name: "Target Achievement", description: "Bullet charts for initiative KPI progress", category: "trends", chartType: "bullet", library: "plotly", dataSource: "initiatives" },
     { id: "6", name: "Categories Breakdown", description: "Sunburst chart of initiative categories", category: "trends", chartType: "sunburst", library: "plotly", dataSource: "initiatives" },

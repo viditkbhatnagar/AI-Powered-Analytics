@@ -11,20 +11,23 @@ export function registerImageRoutes(app: Express): void {
       }
 
       const response = await openai.images.generate({
-        model: "dall-e-3",
+        model: "gpt-image-1",
         prompt,
         n: 1,
-        size: size as "1024x1024" | "1024x1792" | "1792x1024",
+        size: size as "1024x1024" | "1024x1536" | "1536x1024" | "auto",
       });
 
-      const imageData = response.data[0];
+      const imageData = response.data?.[0];
+      if (!imageData) {
+        return res.status(502).json({ error: "No image returned" });
+      }
       res.json({
         url: imageData.url,
         b64_json: imageData.b64_json,
       });
-    } catch (error) {
-      console.error("Error generating image:", error);
-      res.status(500).json({ error: "Failed to generate image" });
+    } catch (error: any) {
+      console.error("Error generating image:", error?.message ?? error);
+      res.status(500).json({ error: error?.message ?? "Failed to generate image" });
     }
   });
 }

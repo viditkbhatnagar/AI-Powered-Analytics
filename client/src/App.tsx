@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { useAppStore } from "@/store/app-store";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -64,11 +66,23 @@ function Router() {
   );
 }
 
+// When the active industry changes, invalidate every cached query so the global
+// queryFn re-fetches with the new ?industry= filter. We only watch the id, not the
+// store object, so unrelated updates (e.g. selectedDomains) don't trigger refetches.
+function IndustryQuerySync() {
+  const selectedIndustryId = useAppStore((s) => s.selectedIndustryId);
+  useEffect(() => {
+    queryClient.invalidateQueries();
+  }, [selectedIndustryId]);
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <TooltipProvider>
+          <IndustryQuerySync />
           <Router />
           <Toaster />
         </TooltipProvider>

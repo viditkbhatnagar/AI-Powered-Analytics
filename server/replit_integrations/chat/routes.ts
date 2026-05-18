@@ -80,9 +80,11 @@ export function registerChatRoutes(app: Express): void {
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
-      // Stream response from OpenAI
+      // Stream response from OpenAI. gpt-5-mini is the faster of the gpt-5 lineup
+      // suitable for interactive chat; switch to gpt-5-nano if you need it cheaper / faster
+      // and accept reduced quality.
       const stream = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-5-mini",
         messages: chatMessages,
         stream: true,
         max_completion_tokens: 2048,
@@ -103,14 +105,14 @@ export function registerChatRoutes(app: Express): void {
 
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
-    } catch (error) {
-      console.error("Error sending message:", error);
-      // Check if headers already sent (SSE streaming started)
+    } catch (error: any) {
+      const message = error?.message ?? "Failed to send message";
+      console.error("Error sending message:", message);
       if (res.headersSent) {
-        res.write(`data: ${JSON.stringify({ error: "Failed to send message" })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
         res.end();
       } else {
-        res.status(500).json({ error: "Failed to send message" });
+        res.status(500).json({ error: message });
       }
     }
   });

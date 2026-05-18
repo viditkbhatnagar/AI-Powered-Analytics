@@ -7,27 +7,31 @@ export const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-/**
- * Generate an image and return as Buffer.
- * Uses gpt-image-1 model via Replit AI Integrations.
- */
+// gpt-image-1 is the current OpenAI image model. It returns b64_json by default and
+// supports the sizes below. dall-e-3 isn't enabled on this account; gpt-image-1 is.
+export type ImageSize = "1024x1024" | "1024x1536" | "1536x1024" | "auto";
+
+async function fetchUrlAsBuffer(url: string): Promise<Buffer> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Image fetch failed: ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 export async function generateImageBuffer(
   prompt: string,
-  size: "1024x1024" | "512x512" | "256x256" = "1024x1024"
+  size: ImageSize = "1024x1024"
 ): Promise<Buffer> {
   const response = await openai.images.generate({
-    model: "dall-e-3",
+    model: "gpt-image-1",
     prompt,
     size,
   });
-  const base64 = response.data[0]?.b64_json ?? "";
-  return Buffer.from(base64, "base64");
+  const first = response.data?.[0];
+  if (first?.b64_json) return Buffer.from(first.b64_json, "base64");
+  if (first?.url) return fetchUrlAsBuffer(first.url);
+  throw new Error("No image data returned from gpt-image-1");
 }
 
-/**
- * Edit/combine multiple images into a composite.
- * Uses gpt-image-1 model via Replit AI Integrations.
- */
 export async function editImages(
   imageFiles: string[],
   prompt: string,
@@ -42,13 +46,17 @@ export async function editImages(
   );
 
   const response = await openai.images.edit({
-    model: "dall-e-3",
+    model: "gpt-image-1",
     image: images,
     prompt,
   });
 
-  const imageBase64 = response.data[0]?.b64_json ?? "";
-  const imageBytes = Buffer.from(imageBase64, "base64");
+  const first = response.data?.[0];
+  const imageBytes = first?.b64_json
+    ? Buffer.from(first.b64_json, "base64")
+    : first?.url
+      ? await fetchUrlAsBuffer(first.url)
+      : Buffer.alloc(0);
 
   if (outputPath) {
     fs.writeFileSync(outputPath, imageBytes);
