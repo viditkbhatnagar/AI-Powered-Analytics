@@ -18,6 +18,8 @@ import DashboardBuilderPage from "@/pages/dashboard-builder";
 import UploadPage from "@/pages/upload";
 import ComparePage from "@/pages/compare";
 import SettingsPage from "@/pages/settings";
+import ChatPage from "@/pages/chat";
+import AiImagesPage from "@/pages/ai-images";
 
 function Router() {
   const [location] = useLocation();
@@ -50,6 +52,8 @@ function Router() {
               <Route path="/dashboard-builder" component={DashboardBuilderPage} />
               <Route path="/upload" component={UploadPage} />
               <Route path="/compare" component={ComparePage} />
+              <Route path="/chat" component={ChatPage} />
+              <Route path="/ai-images" component={AiImagesPage} />
               <Route path="/settings" component={SettingsPage} />
               <Route component={NotFound} />
             </Switch>
