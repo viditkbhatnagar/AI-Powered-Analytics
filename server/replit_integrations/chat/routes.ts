@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import OpenAI from "openai";
 import { chatStorage } from "./storage";
+import { buildIndustryContext } from "./context";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -63,17 +64,40 @@ export function registerChatRoutes(app: Express): void {
   app.post("/api/conversations/:id/messages", async (req: Request, res: Response) => {
     try {
       const conversationId = parseInt(req.params.id);
-      const { content } = req.body;
+      const { content, industryId } = req.body;
+      const industryIdNum = typeof industryId === "number" ? industryId : Number(industryId);
 
       // Save user message
       await chatStorage.createMessage(conversationId, "user", content);
 
       // Get conversation history for context
       const messages = await chatStorage.getMessagesByConversation(conversationId);
-      const chatMessages = messages.map((m) => ({
+      const history = messages.map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
       }));
+
+      // Inject a system prompt grounded in the active industry's data so the
+      // bot answers from this app's seeded dataset rather than guessing.
+      let systemPrompt =
+        "You are the assistant for AI-Powered Analytics, an interactive career analytics platform. " +
+        "Answer concisely (under ~200 words unless asked) and ground every claim in the data block below. " +
+        "If the user asks something the data doesn't cover, say so plainly instead of inventing it. " +
+        "Salary numbers in INR are annual rupees rendered as LPA (Lakhs Per Annum); AED salary numbers are monthly.";
+      if (Number.isFinite(industryIdNum) && industryIdNum > 0) {
+        const ctx = await buildIndustryContext(industryIdNum);
+        if (ctx) {
+          systemPrompt += `\n\n--- DATA SNAPSHOT (live from this platform) ---\n${ctx}\n--- END DATA SNAPSHOT ---`;
+        }
+      } else {
+        systemPrompt +=
+          "\n\n(No industry is currently selected in the UI. If the user asks about a specific industry, ask them to switch to it via the sidebar first.)";
+      }
+
+      const chatMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
+        { role: "system", content: systemPrompt },
+        ...history,
+      ];
 
       // Set up SSE
       res.setHeader("Content-Type", "text/event-stream");

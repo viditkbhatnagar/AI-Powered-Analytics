@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Image, Loader2, Download, Trash2, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useSelectedIndustry } from "@/hooks/use-industry";
 
 interface GeneratedImage {
   id: string;
@@ -39,6 +40,8 @@ function saveGallery(images: GeneratedImage[]) {
 }
 
 export default function AiImagesPage() {
+  const { current } = useSelectedIndustry();
+  const industryId = current?.id ?? null;
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState("1024x1024");
   const [gallery, setGallery] = useState<GeneratedImage[]>(() => loadGallery());
@@ -49,7 +52,7 @@ export default function AiImagesPage() {
 
   const generateImage = useMutation({
     mutationFn: async ({ prompt, size }: { prompt: string; size: string }) => {
-      const res = await apiRequest("POST", "/api/generate-image", { prompt, size });
+      const res = await apiRequest("POST", "/api/generate-image", { prompt, size, industryId });
       return res.json();
     },
     onSuccess: (data: { url?: string; b64_json?: string }) => {

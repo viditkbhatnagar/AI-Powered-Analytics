@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useSelectedIndustry } from "@/hooks/use-industry";
 
 interface Conversation {
   id: number;
@@ -36,6 +37,8 @@ interface ConversationWithMessages extends Conversation {
 
 export default function ChatPage() {
   const queryClient = useQueryClient();
+  const { current } = useSelectedIndustry();
+  const industryId = current?.id ?? null;
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [streamingContent, setStreamingContent] = useState("");
@@ -123,7 +126,7 @@ export default function ChatPage() {
       const response = await fetch(`/api/conversations/${activeConversationId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, industryId }),
       });
 
       if (!response.ok) throw new Error("Failed to send message");
@@ -171,7 +174,7 @@ export default function ChatPage() {
       setIsStreaming(false);
       setStreamingContent("");
     }
-  }, [inputValue, activeConversationId, isStreaming, queryClient]);
+  }, [inputValue, activeConversationId, isStreaming, queryClient, industryId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -249,8 +252,9 @@ export default function ChatPage() {
               </div>
               <h2 className="text-xl font-semibold">AI Chat Assistant</h2>
               <p className="text-muted-foreground max-w-md">
-                Ask questions about UAE supply chain careers, salary benchmarks,
-                certifications, and industry trends.
+                Ask questions about {current?.name ?? "your active industry"} —
+                domains, roles, salary benchmarks, certifications and initiatives.
+                The bot is grounded in this platform's live data.
               </p>
               <Button
                 onClick={() => createConversation.mutate()}
